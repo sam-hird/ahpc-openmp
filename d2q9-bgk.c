@@ -328,24 +328,11 @@ float timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* ob
         d_equ[7] = w2 * local_density * (1.f + (-u_x - u_y) * c_sq_inv + ((-u_x - u_y) * (-u_x - u_y)) * c_sq_sq_inv - u_over_c_sq);
         d_equ[8] = w2 * local_density * (1.f + ( u_x - u_y) * c_sq_inv + (( u_x - u_y) * ( u_x - u_y)) * c_sq_sq_inv - u_over_c_sq);
 
-        /* relaxation step */
-        tmp_cells[ii + jj*params.nx].speeds[0] = currentSpeeds[0] + params.omega * (d_equ[0] - currentSpeeds[0]);
-        tmp_cells[ii + jj*params.nx].speeds[1] = currentSpeeds[1] + params.omega * (d_equ[1] - currentSpeeds[1]);
-        tmp_cells[ii + jj*params.nx].speeds[2] = currentSpeeds[2] + params.omega * (d_equ[2] - currentSpeeds[2]);
-        tmp_cells[ii + jj*params.nx].speeds[3] = currentSpeeds[3] + params.omega * (d_equ[3] - currentSpeeds[3]);
-        tmp_cells[ii + jj*params.nx].speeds[4] = currentSpeeds[4] + params.omega * (d_equ[4] - currentSpeeds[4]);
-        tmp_cells[ii + jj*params.nx].speeds[5] = currentSpeeds[5] + params.omega * (d_equ[5] - currentSpeeds[5]);
-        tmp_cells[ii + jj*params.nx].speeds[6] = currentSpeeds[6] + params.omega * (d_equ[6] - currentSpeeds[6]);
-        tmp_cells[ii + jj*params.nx].speeds[7] = currentSpeeds[7] + params.omega * (d_equ[7] - currentSpeeds[7]);
-        tmp_cells[ii + jj*params.nx].speeds[8] = currentSpeeds[8] + params.omega * (d_equ[8] - currentSpeeds[8]);
-
-        // av vels calculation 
-
         /* local density total */
         local_density = 0.f;
-
         for (int kk = 0; kk < NSPEEDS; kk++)
         {
+          tmp_cells[ii + jj*params.nx].speeds[kk] = currentSpeeds[kk] + params.omega * (d_equ[kk] - currentSpeeds[kk]);
           local_density += tmp_cells[ii + jj*params.nx].speeds[kk];
         }
 
