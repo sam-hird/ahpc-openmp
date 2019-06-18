@@ -60,6 +60,18 @@
 #define FINALSTATEFILE  "final_state.dat"
 #define AVVELSFILE      "av_vels.dat"
 
+
+/* compute accelerate weighting factors */
+float aw1, aw2;
+
+
+float c_sq;// = 1.f / 3.f; /* square of speed of sound */
+float c_sq_inv;//    = 1.f  / c_sq;
+float c_sq_sq_inv;// = 0.5f * c_sq_inv * c_sq_inv;
+float w0;// = 4.f / 9.f;  /* weighting factor */
+float w1;// = 1.f / 9.f;  /* weighting factor */
+float w2;// = 1.f / 36.f; /* weighting factor */
+
 /* struct to hold the parameter values */
 typedef struct
 {
@@ -154,6 +166,17 @@ int main(int argc, char* argv[])
   gettimeofday(&timstr, NULL);
   tic = timstr.tv_sec + (timstr.tv_usec / 1000000.0);
 
+  /* compute accelerate weighting factors */
+  aw1 = params.density * params.accel / 9.f;
+  aw2 = params.density * params.accel / 36.f;
+
+  c_sq = 1.f / 3.f; /* square of speed of sound */
+  c_sq_inv    = 1.f  / c_sq;
+  c_sq_sq_inv = 0.5f * c_sq_inv * c_sq_inv;
+  w0 = 4.f / 9.f;  /* weighting factor */
+  w1 = 1.f / 9.f;  /* weighting factor */
+  w2 = 1.f / 36.f; /* weighting factor */
+
   for (int tt = 0; tt < params.maxIters; tt++)
   {
     av_vels[tt] = timestep(params, cells, tmp_cells, obstacles);
@@ -197,10 +220,6 @@ float timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* ob
   int   tot_cells = 0;    /* no. of cells used in calculation */
   float tot_u = 0.f;        /* accumulated magnitudes of velocity for each cell */
 
-  /* compute accelerate weighting factors */
-  const float aw1 = params.density * params.accel / 9.f;
-  const float aw2 = params.density * params.accel / 36.f;
-
   /* modify the 2nd row of the grid */
   int jj = params.ny - 2;
 
@@ -214,22 +233,15 @@ float timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* ob
         && (cells[ii + jj*params.nx].speeds[7] - aw2) > 0.f)
     {
       /* increase 'east-side' densities */
-      cells[ii + jj*params.nx].speeds[1] += aw1;
-      cells[ii + jj*params.nx].speeds[5] += aw2;
-      cells[ii + jj*params.nx].speeds[8] += aw2;
       /* decrease 'west-side' densities */
+      cells[ii + jj*params.nx].speeds[1] += aw1;
       cells[ii + jj*params.nx].speeds[3] -= aw1;
+      cells[ii + jj*params.nx].speeds[5] += aw2;
       cells[ii + jj*params.nx].speeds[6] -= aw2;
       cells[ii + jj*params.nx].speeds[7] -= aw2;
+      cells[ii + jj*params.nx].speeds[8] += aw2;
     }
   }
-
-  const float c_sq = 1.f / 3.f; /* square of speed of sound */
-  const float c_sq_inv    = 1.f  / c_sq;
-  const float c_sq_sq_inv = 0.5f * c_sq_inv * c_sq_inv;
-  const float w0 = 4.f / 9.f;  /* weighting factor */
-  const float w1 = 1.f / 9.f;  /* weighting factor */
-  const float w2 = 1.f / 36.f; /* weighting factor */
 
   /* loop over _all_ cells */
   for (int jj = 0; jj < params.ny; jj++)
@@ -278,6 +290,7 @@ float timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* ob
                                         cells[x_e + y_s*params.nx].speeds[6],
                                         cells[x_e + y_n*params.nx].speeds[7],
                                         cells[x_w + y_n*params.nx].speeds[8]};
+
         /* compute local density total */
         float local_density = currentSpeeds[0] + 
                               currentSpeeds[1] + 
@@ -291,17 +304,17 @@ float timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* ob
 
         /* compute x velocity component */
         float u_x = ( currentSpeeds[1]
-                    + currentSpeeds[5]
-                    + currentSpeeds[8]
                     - currentSpeeds[3]
+                    + currentSpeeds[5]
                     - currentSpeeds[6]
-                    - currentSpeeds[7])
+                    - currentSpeeds[7]
+                    + currentSpeeds[8])
                      / local_density;
         /* compute y velocity component */
         float u_y = ( currentSpeeds[2]
+                    - currentSpeeds[4]
                     + currentSpeeds[5]
                     + currentSpeeds[6]
-                    - currentSpeeds[4]
                     - currentSpeeds[7]
                     - currentSpeeds[8])
                      / local_density;
@@ -314,6 +327,8 @@ float timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* ob
 
         /* equilibrium densities */
         float d_equ[NSPEEDS];
+
+        
         /* zero velocity density: weight w0 */
         d_equ[0] = w0 * local_density * (1.f - u_over_c_sq);
 
@@ -338,17 +353,17 @@ float timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* ob
 
         /* x-component of velocity */
         u_x = ( tmp_cells[ii + jj*params.nx].speeds[1]
-              + tmp_cells[ii + jj*params.nx].speeds[5]
-              + tmp_cells[ii + jj*params.nx].speeds[8]
               - tmp_cells[ii + jj*params.nx].speeds[3]
               - tmp_cells[ii + jj*params.nx].speeds[6]
-              - tmp_cells[ii + jj*params.nx].speeds[7])
+              - tmp_cells[ii + jj*params.nx].speeds[7]
+              + tmp_cells[ii + jj*params.nx].speeds[5]
+              + tmp_cells[ii + jj*params.nx].speeds[8])
                / local_density;
         /* compute y velocity component */
         u_y = ( tmp_cells[ii + jj*params.nx].speeds[2]
+              - tmp_cells[ii + jj*params.nx].speeds[4]
               + tmp_cells[ii + jj*params.nx].speeds[5]
               + tmp_cells[ii + jj*params.nx].speeds[6]
-              - tmp_cells[ii + jj*params.nx].speeds[4]
               - tmp_cells[ii + jj*params.nx].speeds[7]
               - tmp_cells[ii + jj*params.nx].speeds[8])
                / local_density;
