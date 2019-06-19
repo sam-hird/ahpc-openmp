@@ -217,7 +217,7 @@ float timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* ob
 {
   //--------accelerate flow----------
 
-  int   tot_cells = 0;    /* no. of cells used in calculation */
+  float tot_cells = 0.f;    /* no. of cells used in calculation */
   float tot_u = 0.f;        /* accumulated magnitudes of velocity for each cell */
 
   /* modify the 2nd row of the grid */
@@ -291,16 +291,12 @@ float timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* ob
                                         cells[x_e + y_n*params.nx].speeds[7],
                                         cells[x_w + y_n*params.nx].speeds[8]};
 
-        /* compute local density total */
-        float local_density = currentSpeeds[0] + 
-                              currentSpeeds[1] + 
-                              currentSpeeds[2] +
-                              currentSpeeds[3] +
-                              currentSpeeds[4] +
-                              currentSpeeds[5] + 
-                              currentSpeeds[6] +
-                              currentSpeeds[7] +
-                              currentSpeeds[8];
+        /* local density total */
+        float local_density = 0.f;
+        for (int kk = 0; kk < NSPEEDS; kk++)
+        {
+          local_density += currentSpeeds[kk];
+        }
 
         /* compute x velocity component */
         float u_x = ( currentSpeeds[1]
@@ -370,11 +366,11 @@ float timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* ob
         /* accumulate the norm of x- and y- velocity components */
         tot_u += sqrtf((u_x * u_x) + (u_y * u_y));
         /* increase counter of inspected cells */
-        ++tot_cells;
+        tot_cells += 1.f;
       }
     }
   }
-  return tot_u / (float)tot_cells;
+  return tot_u / tot_cells;
 
 }
 
