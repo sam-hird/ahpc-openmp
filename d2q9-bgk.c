@@ -225,7 +225,7 @@ int main(int argc, char* argv[])
   return EXIT_SUCCESS;
 }
 
-float timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles)
+float timestep(const t_param params, restrict t_speed* cells, restrict t_speed* tmp_cells, int* obstacles)
 {
   //--------accelerate flow----------
 
@@ -254,9 +254,6 @@ float timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* ob
       cells->speeds[8][ii + jj * params.nx] +=  aw2;
     }
   }
-
-  
-
 
   /* loop over _all_ cells */
   for (int jj = 0; jj < params.ny; jj++)
@@ -297,7 +294,7 @@ float timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* ob
         int x_w = (ii == 0) ? (ii + params.nx - 1) : (ii - 1);
 
         //avoid bad access pattern by copying all the relevant speeds into an array
-        float currentSpeeds[NSPEEDS];
+        restrict float currentSpeeds[NSPEEDS];
         currentSpeeds[0] = cells->speeds[0][ii  +  jj*params.nx];
         currentSpeeds[1] = cells->speeds[1][x_w +  jj*params.nx];
         currentSpeeds[2] = cells->speeds[2][ii  + y_s*params.nx];
