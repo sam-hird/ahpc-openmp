@@ -225,7 +225,7 @@ int main(int argc, char* argv[])
   return EXIT_SUCCESS;
 }
 
-float timestep(const t_param params, restrict t_speed* cells, restrict t_speed* tmp_cells, int* obstacles)
+float timestep(const t_param params,  t_speed* restrict cells,  t_speed* restrict tmp_cells, int* obstacles)
 {
   //--------accelerate flow----------
 
@@ -234,7 +234,7 @@ float timestep(const t_param params, restrict t_speed* cells, restrict t_speed* 
 
   /* modify the 2nd row of the grid */
   int jj = params.ny - 2;
-
+#pragma ivdep
   for (int ii = 0; ii < params.nx; ii++)
   {
     /* if the cell is not occupied and
@@ -258,6 +258,7 @@ float timestep(const t_param params, restrict t_speed* cells, restrict t_speed* 
   /* loop over _all_ cells */
   for (int jj = 0; jj < params.ny; jj++)
   {
+#pragma ivdep
     for (int ii = 0; ii < params.nx; ii++)
     {
       int currentIndex = ii + jj * params.nx;
@@ -294,23 +295,26 @@ float timestep(const t_param params, restrict t_speed* cells, restrict t_speed* 
         int x_w = (ii == 0) ? (ii + params.nx - 1) : (ii - 1);
 
         //avoid bad access pattern by copying all the relevant speeds into an array
-        restrict float currentSpeeds[NSPEEDS];
-        currentSpeeds[0] = cells->speeds[0][ii  +  jj*params.nx];
-        currentSpeeds[1] = cells->speeds[1][x_w +  jj*params.nx];
-        currentSpeeds[2] = cells->speeds[2][ii  + y_s*params.nx];
-        currentSpeeds[3] = cells->speeds[3][x_e +  jj*params.nx];
-        currentSpeeds[4] = cells->speeds[4][ii  + y_n*params.nx];
-        currentSpeeds[5] = cells->speeds[5][x_w + y_s*params.nx];
-        currentSpeeds[6] = cells->speeds[6][x_e + y_s*params.nx];
-        currentSpeeds[7] = cells->speeds[7][x_e + y_n*params.nx];
-        currentSpeeds[8] = cells->speeds[8][x_w + y_n*params.nx];
-
-        /* local density total */
+        float currentSpeeds[NSPEEDS];
         float local_density = 0.f;
-        for (int kk = 0; kk < NSPEEDS; kk++)
-        {
-          local_density += currentSpeeds[kk];
-        }
+        currentSpeeds[0] = cells->speeds[0][ii  +  jj*params.nx];
+        local_density += currentSpeeds[0];
+        currentSpeeds[1] = cells->speeds[1][x_w +  jj*params.nx];
+        local_density += currentSpeeds[1];
+        currentSpeeds[2] = cells->speeds[2][ii  + y_s*params.nx];
+        local_density += currentSpeeds[2];
+        currentSpeeds[3] = cells->speeds[3][x_e +  jj*params.nx];
+        local_density += currentSpeeds[3];
+        currentSpeeds[4] = cells->speeds[4][ii  + y_n*params.nx];
+        local_density += currentSpeeds[4];
+        currentSpeeds[5] = cells->speeds[5][x_w + y_s*params.nx];
+        local_density += currentSpeeds[5];
+        currentSpeeds[6] = cells->speeds[6][x_e + y_s*params.nx];
+        local_density += currentSpeeds[6];
+        currentSpeeds[7] = cells->speeds[7][x_e + y_n*params.nx];
+        local_density += currentSpeeds[7];
+        currentSpeeds[8] = cells->speeds[8][x_w + y_n*params.nx];
+        local_density += currentSpeeds[8];
 
         /* compute x velocity component */
         float u_x = ( currentSpeeds[1]
@@ -355,11 +359,26 @@ float timestep(const t_param params, restrict t_speed* cells, restrict t_speed* 
 
         /* local density total */
         local_density = 0.f;
-        for (int i = 0; i < NSPEEDS; ++i)
-        {
-          tmp_cells->speeds[i][currentIndex] = currentSpeeds[i] + params.omega * (d_equ[i] - currentSpeeds[i]);
-          local_density += tmp_cells->speeds[i][currentIndex];
-        }
+        
+        tmp_cells->speeds[0][currentIndex] = currentSpeeds[0] + params.omega * (d_equ[0] - currentSpeeds[0]);
+        local_density += tmp_cells->speeds[0][currentIndex];
+        tmp_cells->speeds[1][currentIndex] = currentSpeeds[1] + params.omega * (d_equ[1] - currentSpeeds[1]);
+        local_density += tmp_cells->speeds[1][currentIndex];
+        tmp_cells->speeds[2][currentIndex] = currentSpeeds[2] + params.omega * (d_equ[2] - currentSpeeds[2]);
+        local_density += tmp_cells->speeds[2][currentIndex];
+        tmp_cells->speeds[3][currentIndex] = currentSpeeds[3] + params.omega * (d_equ[3] - currentSpeeds[3]);
+        local_density += tmp_cells->speeds[3][currentIndex];
+        tmp_cells->speeds[4][currentIndex] = currentSpeeds[4] + params.omega * (d_equ[4] - currentSpeeds[4]);
+        local_density += tmp_cells->speeds[4][currentIndex];
+        tmp_cells->speeds[5][currentIndex] = currentSpeeds[5] + params.omega * (d_equ[5] - currentSpeeds[5]);
+        local_density += tmp_cells->speeds[5][currentIndex];
+        tmp_cells->speeds[6][currentIndex] = currentSpeeds[6] + params.omega * (d_equ[6] - currentSpeeds[6]);
+        local_density += tmp_cells->speeds[6][currentIndex];
+        tmp_cells->speeds[7][currentIndex] = currentSpeeds[7] + params.omega * (d_equ[7] - currentSpeeds[7]);
+        local_density += tmp_cells->speeds[7][currentIndex];
+        tmp_cells->speeds[8][currentIndex] = currentSpeeds[8] + params.omega * (d_equ[8] - currentSpeeds[8]);
+        local_density += tmp_cells->speeds[8][currentIndex];
+        
 
         /* x-component of velocity */
         u_x = ( tmp_cells->speeds[1][currentIndex]
