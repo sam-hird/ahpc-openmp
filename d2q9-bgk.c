@@ -288,7 +288,6 @@ float timestep(const t_param params,  t_speed* restrict cells,  t_speed* restric
   __assume_aligned(tmp_cells->speeds[6],64);
   __assume_aligned(tmp_cells->speeds[7],64);
   __assume_aligned(tmp_cells->speeds[8],64);
-  
   __assume((params.ny)%2==0);
   __assume((params.ny)%4==0);
   __assume((params.ny)%8==0);
@@ -304,22 +303,23 @@ float timestep(const t_param params,  t_speed* restrict cells,  t_speed* restric
   __assume((params.nx)%32==0);
   __assume((params.nx)%64==0);
   __assume((params.nx)%128==0);
-  for (int jj = 0; jj < params.ny; jj++)
+  for (int jj = 0; jj < params.ny; ++jj)
   {
     #pragma ivdep
     #pragma omp simd
-    for (int ii = 0; ii < params.nx; ii++)
+    for (int ii = 0; ii < params.nx; ++ii)
     {
       const int currentIndex = ii + jj * params.nx;
+      /* determine neighbours with wrap around */
+      const int y_n = (jj + 1) % params.ny;
+      const int x_e = (ii + 1) % params.nx;
+      const int y_s = (jj == 0) ? (jj + params.ny - 1) : (jj - 1);
+      const int x_w = (ii == 0) ? (ii + params.nx - 1) : (ii - 1);
+
       /* if the cell contains an obstacle */
       if (obstacles[currentIndex])
       {
         //-----------propagate + rebound---------------
-        /* determine neighbours with wrap around */
-        const int y_n = (jj + 1) % params.ny;
-        const int x_e = (ii + 1) % params.nx;
-        const int y_s = (jj == 0) ? (jj + params.ny - 1) : (jj - 1);
-        const int x_w = (ii == 0) ? (ii + params.nx - 1) : (ii - 1);
         /* propagate densities from neighbouring cells, following
         ** mirrored directions of travel and writing into
         ** scratch space grid */
@@ -336,34 +336,20 @@ float timestep(const t_param params,  t_speed* restrict cells,  t_speed* restric
       } else {
         //-------propagate + collision + av_vels-------
 
-        /* determine indices of axis-direction neighbours
-        ** respecting periodic boundary conditions (wrap around) */
-        const int y_n = (jj + 1) % params.ny;
-        const int x_e = (ii + 1) % params.nx;
-        const int y_s = (jj == 0) ? (jj + params.ny - 1) : (jj - 1);
-        const int x_w = (ii == 0) ? (ii + params.nx - 1) : (ii - 1);
-
         //avoid bad access pattern by copying all the relevant speeds into an array
-        float local_density = 0.f;
         const float currentSpeed0 = cells->speeds[0][ii  +  jj*params.nx];
-        local_density += currentSpeed0;
         const float currentSpeed1 = cells->speeds[1][x_w +  jj*params.nx];
-        local_density += currentSpeed1;
         const float currentSpeed2 = cells->speeds[2][ii  + y_s*params.nx];
-        local_density += currentSpeed2;
         const float currentSpeed3 = cells->speeds[3][x_e +  jj*params.nx];
-        local_density += currentSpeed3;
         const float currentSpeed4 = cells->speeds[4][ii  + y_n*params.nx];
-        local_density += currentSpeed4;
         const float currentSpeed5 = cells->speeds[5][x_w + y_s*params.nx];
-        local_density += currentSpeed5;
         const float currentSpeed6 = cells->speeds[6][x_e + y_s*params.nx];
-        local_density += currentSpeed6;
         const float currentSpeed7 = cells->speeds[7][x_e + y_n*params.nx];
-        local_density += currentSpeed7;
         const float currentSpeed8 = cells->speeds[8][x_w + y_n*params.nx];
-        local_density += currentSpeed8;
 
+        const float local_density = currentSpeed0 + currentSpeed1 + currentSpeed2 
+                                  + currentSpeed3 + currentSpeed4 + currentSpeed5 
+                                  + currentSpeed6 + currentSpeed7 + currentSpeed8;
         /* compute x velocity component */
         const float u_x = ( currentSpeed1
                     - currentSpeed3
