@@ -306,15 +306,19 @@ float timestep(const t_param params,  t_speed* restrict cells,  t_speed* restric
   int ii;
   #pragma omp parallel default(shared)
   {
-    #pragma omp for
+    #pragma omp for simd
     for (jj = 0; jj < params.ny; ++jj)
     {
+      float tot_u1 = 0.f;
+      float tot_cells1 = 0.f;
       #pragma omp parallel shared(jj, params)
       {
-        #pragma ivdep
+        #pragma vector aligned
         #pragma omp for simd
         for (ii = 0; ii < params.nx; ++ii)
         {
+          float tot_u2 = 0.f;
+          float tot_cells2 = 0.f;
           const int currentIndex = ii + jj * params.nx;
           /* determine neighbours with wrap around */
           const int y_n = (jj + 1) % params.ny;
@@ -434,12 +438,21 @@ float timestep(const t_param params,  t_speed* restrict cells,  t_speed* restric
                   - tmp_cells->speeds[8][currentIndex])
                    / av_density;
             /* accumulate the norm of x- and y- velocity components */
-            tot_u += sqrtf((u_x2 * u_x2) + (u_y2 * u_y2));
+            tot_u2 += sqrtf((u_x2 * u_x2) + (u_y2 * u_y2));
             /* increase counter of inspected cells */
-            tot_cells += 1.f;
+            tot_cells2 += 1.f;
           }
+          #pragma omp atomic
+          tot_u1 += tot_u2;
+          #pragma omp atomic
+          tot_cells1 += tot_cells2;
         }
+        
       }
+      #pragma omp atomic
+      tot_u += tot_u1;
+      #pragma omp atomic
+      tot_cells += tot_cells1;
     }
   }
   return tot_u / tot_cells;
