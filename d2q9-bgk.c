@@ -73,6 +73,8 @@ const float w0 = 4.f / 9.f;  /* weighting factor */
 const float w1 = 1.f / 9.f;  /* weighting factor */
 const float w2 = 1.f / 36.f; /* weighting factor */
 
+ int NUM_THREADS;
+
 /* struct to hold the parameter values */
 typedef struct
 {
@@ -169,7 +171,7 @@ int main(int argc, char* argv[])
   double systim;                /* floating point number to record elapsed system CPU time */
 
   /* parse the command line */
-  if (argc != 3)
+  if (argc != 4)
   {
     usage(argv[0]);
   }
@@ -177,6 +179,7 @@ int main(int argc, char* argv[])
   {
     paramfile = argv[1];
     obstaclefile = argv[2];
+    omp_set_num_threads(atoi(argv[3]));
   }
 
   /* initialise our data structures and load values from file */
@@ -215,11 +218,11 @@ int main(int argc, char* argv[])
   systim = timstr.tv_sec + (timstr.tv_usec / 1000000.0);
 
   /* write final values and free memory */
-  printf("==done==\n");
-  printf("Reynolds number:\t\t%.12E\n", calc_reynolds(params, cells, obstacles));
-  printf("Elapsed time:\t\t\t%.6lf (s)\n", toc - tic);
-  printf("Elapsed user CPU time:\t\t%.6lf (s)\n", usrtim);
-  printf("Elapsed system CPU time:\t%.6lf (s)\n", systim);
+  //printf("==done==\n");
+  //printf("Reynolds number:\t\t%.12E\n", calc_reynolds(params, cells, obstacles));
+  printf("%.6lf (s)\n", toc - tic);
+  //printf("Elapsed user CPU time:\t\t%.6lf (s)\n", usrtim);
+  //printf("Elapsed system CPU time:\t%.6lf (s)\n", systim);
   write_values(params, cells, obstacles, av_vels);
   finalise(&params, &cells, &tmp_cells, &obstacles, &av_vels);
 
