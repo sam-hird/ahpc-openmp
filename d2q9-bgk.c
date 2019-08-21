@@ -357,47 +357,20 @@ float timestep(const t_param params,  t_speed* restrict cells,  t_speed* restric
         const float d_equ7 = w2 * local_density * (1.f + (-u_x - u_y) * c_sq_inv + ((-u_x - u_y) * (-u_x - u_y)) * c_sq_sq_inv - u_over_c_sq);
         const float d_equ8 = w2 * local_density * (1.f + ( u_x - u_y) * c_sq_inv + (( u_x - u_y) * ( u_x - u_y)) * c_sq_sq_inv - u_over_c_sq);
 
-        /* local density total */
-        float av_density = 0.f;
+       
         
         tmp_cells->speeds[0][currentIndex] = currentSpeed0 + params.omega * (d_equ0 - currentSpeed0);
-        av_density += tmp_cells->speeds[0][currentIndex];
         tmp_cells->speeds[1][currentIndex] = currentSpeed1 + params.omega * (d_equ1 - currentSpeed1);
-        av_density += tmp_cells->speeds[1][currentIndex];
         tmp_cells->speeds[2][currentIndex] = currentSpeed2 + params.omega * (d_equ2 - currentSpeed2);
-        av_density += tmp_cells->speeds[2][currentIndex];
         tmp_cells->speeds[3][currentIndex] = currentSpeed3 + params.omega * (d_equ3 - currentSpeed3);
-        av_density += tmp_cells->speeds[3][currentIndex];
         tmp_cells->speeds[4][currentIndex] = currentSpeed4 + params.omega * (d_equ4 - currentSpeed4);
-        av_density += tmp_cells->speeds[4][currentIndex];
         tmp_cells->speeds[5][currentIndex] = currentSpeed5 + params.omega * (d_equ5 - currentSpeed5);
-        av_density += tmp_cells->speeds[5][currentIndex];
         tmp_cells->speeds[6][currentIndex] = currentSpeed6 + params.omega * (d_equ6 - currentSpeed6);
-        av_density += tmp_cells->speeds[6][currentIndex];
         tmp_cells->speeds[7][currentIndex] = currentSpeed7 + params.omega * (d_equ7 - currentSpeed7);
-        av_density += tmp_cells->speeds[7][currentIndex];
         tmp_cells->speeds[8][currentIndex] = currentSpeed8 + params.omega * (d_equ8 - currentSpeed8);
-        av_density += tmp_cells->speeds[8][currentIndex];
         
-
-        /* x-component of velocity */
-        const float u_x2 = ( tmp_cells->speeds[1][currentIndex]
-              - tmp_cells->speeds[3][currentIndex]
-              - tmp_cells->speeds[6][currentIndex]
-              - tmp_cells->speeds[7][currentIndex]
-              + tmp_cells->speeds[5][currentIndex]
-              + tmp_cells->speeds[8][currentIndex])
-               / av_density;
-        /* compute y velocity component */
-        const float u_y2 = ( tmp_cells->speeds[2][currentIndex]
-              - tmp_cells->speeds[4][currentIndex]
-              + tmp_cells->speeds[5][currentIndex]
-              + tmp_cells->speeds[6][currentIndex]
-              - tmp_cells->speeds[7][currentIndex]
-              - tmp_cells->speeds[8][currentIndex])
-               / av_density;
         /* accumulate the norm of x- and y- velocity components */
-        tot_u1 += sqrtf((u_x2 * u_x2) + (u_y2 * u_y2));
+        tot_u1 += sqrtf(u_sq);
         /* increase counter of inspected cells */
         tot_cells1 += 1.f;
       }
